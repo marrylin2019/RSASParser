@@ -3,7 +3,7 @@ import sys
 import toml
 import json
 import shutil
-import zipfile 
+import zipfile
 import argparse
 import polars as pl
 from enum import Enum
@@ -33,14 +33,14 @@ boolean_map = {
 
 class Cfg:
     def __init__(self, config_path: Path):
-        self.__cfg: dict = toml.load(config_path) 
+        self.__cfg: dict = toml.load(config_path)
         self.tmp_path = Path(self.__cfg['tmp_folder'])
-        self.index_html = self.tmp_path/self.__cfg['index_html']
+        self.index_html = self.tmp_path / self.__cfg['index_html']
 
     @property
     def hosts(self) -> Path:
         return Path(self.__cfg['tmp_folder']) / self.__cfg['htmls_folder']
-    
+
     @property
     def html_name_temp(self) -> str:
         return self.__cfg['html_name_template']
@@ -96,7 +96,7 @@ class AllTemparser:
                     '详细描述': ''.join([i if i else '\r\n' for i in vul_msg['i18n_description']]),
                     '解决方案': ''.join([i if i else '\r\n' for i in vul_msg['i18n_solution']]),
                     '威胁分值': vul_msg['severity_points'],
-                    '危险插件': boolean_map[vul_msg['is_dangerous']], 
+                    '危险插件': boolean_map[vul_msg['is_dangerous']],
                     '发现日期': vul_msg['date_found'],
                     'CVE编号': vul_msg['cve_id'],
                     '扫描起始时间': self.scan_start_time,
@@ -111,27 +111,28 @@ class AllTemparser:
 
 class WebTemparser:
     SCHEMA = {
-            'IP地址': pl.Utf8,
-            'URL': pl.Utf8,
-            '请求方式': pl.Utf8,
-            '问题参数': pl.Utf8,
-            '参考（验证）': pl.Utf8,
-            '漏洞名称': pl.Utf8,
-            '威胁分值': pl.Utf8,
-            '漏洞级别': pl.Utf8,
-            'CVSS评分': pl.Utf8,
-            '详细描述': pl.Utf8,
-            '解决办法': pl.Utf8,
-            '危险插件': pl.Utf8,
-            '原始请求': pl.Utf8,
-            '原始响应': pl.Utf8,
-            '扫描起始时间': pl.Utf8,
-            '扫描结束时间': pl.Utf8,
-        }
+        'IP地址': pl.Utf8,
+        'URL': pl.Utf8,
+        '请求方式': pl.Utf8,
+        '问题参数': pl.Utf8,
+        '参考（验证）': pl.Utf8,
+        '漏洞名称': pl.Utf8,
+        '威胁分值': pl.Utf8,
+        '漏洞级别': pl.Utf8,
+        'CVSS评分': pl.Utf8,
+        '详细描述': pl.Utf8,
+        '解决办法': pl.Utf8,
+        '危险插件': pl.Utf8,
+        '原始请求': pl.Utf8,
+        '原始响应': pl.Utf8,
+        '扫描起始时间': pl.Utf8,
+        '扫描结束时间': pl.Utf8,
+    }
 
     def __init__(self, html: Path):
         elem = etree.HTML(html.read_text(encoding="utf-8"), etree.HTMLParser(huge_tree=True))
         # print(html.read_text(encoding="utf-8"))
+        self.html = html
         self.rows = []
         self.__data = json.loads(elem.xpath("//script[1]/text()")[0].replace("window.data = ", '').replace(';', ''))
         self.__data = self.__data['categories']
@@ -144,27 +145,31 @@ class WebTemparser:
 
     def __parse(self):
         for outer_dict in self.__main_info:
-            vul_name = outer_dict['i18n_name'] # 漏洞名称
-            severity_points = outer_dict['severity_points'] # 威胁分值
-            risk_level = level_map[outer_dict['risk_level']] # 漏洞级别
+            vul_name = outer_dict['i18n_name']  # 漏洞名称
+            severity_points = outer_dict['severity_points']  # 威胁分值
+            risk_level = level_map[outer_dict['risk_level']]  # 漏洞级别
             vul_info = outer_dict['web_vuln_obj']
-            cvss = vul_info['cvss'] # CVSS评分
-            description = vul_info['i18n_description'] # 详细描述
-            solution = vul_info['i18n_solution'] # 解决办法
-            is_dangerous = boolean_map[vul_info['is_dangerous']] # 危险插件
+            cvss = vul_info['cvss']  # CVSS评分
+            description = vul_info['i18n_description']  # 详细描述
+            solution = vul_info['i18n_solution']  # 解决办法
+            is_dangerous = boolean_map[vul_info['is_dangerous']]  # 危险插件
 
             for inner_dict in outer_dict['pages']:
-                raw_req_info = inner_dict['raw_data'][0]['request']
-                raw_res_info = inner_dict['raw_data'][0]['response']
-                raw_request = (
-                        f'{raw_req_info["url"]}\n' +
-                        ''.join([f"{item[0]}: {item[1]}\n" for item in raw_req_info["headers"]])
-                )
-                raw_response = (
-                        f'{raw_res_info["status"]}\n' +
-                        ''.join([f"{item[0]}: {item[1]}\n" for item in raw_res_info["headers"]]) +
-                        ''.join([f"{item}\n" for item in raw_res_info['contents']])
-                )
+                if len(inner_dict['raw_data']) == 0:
+                    raw_request = ''
+                    raw_response = ''
+                else:
+                    raw_req_info = inner_dict['raw_data'][0]['request']
+                    raw_res_info = inner_dict['raw_data'][0]['response']
+                    raw_request = (
+                            f'{raw_req_info["url"]}\n' +
+                            ''.join([f"{item[0]}: {item[1]}\n" for item in raw_req_info["headers"]])
+                    )
+                    raw_response = (
+                            f'{raw_res_info["status"]}\n' +
+                            ''.join([f"{item[0]}: {item[1]}\n" for item in raw_res_info["headers"]]) +
+                            ''.join([f"{item}\n" for item in raw_res_info['contents']])
+                    )
                 self.rows.append({
                     'IP地址': self.ip_addr,
                     'URL': inner_dict['url'],
@@ -205,12 +210,12 @@ def temp_type_detector(cfg: Cfg) -> TEMPLATE_TYPE:
         print("Unimplemented template type!")
         exit(-1)
 
- 
+
 # 解压整个ZIP包到指定目录 
-def extract_zip(zip_path: Path, output_dir: Path): 
+def extract_zip(zip_path: Path, output_dir: Path):
     os.makedirs(output_dir, exist_ok=True)  # 创建输出目录（若不存在）
-    with zipfile.ZipFile(zip_path, 'r') as zf: 
-        zf.extractall(output_dir)   # 解压所有文件 
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        zf.extractall(output_dir)  # 解压所有文件
 
 
 def parse_host(host, temp_type: TEMPLATE_TYPE) -> list[dict]:
@@ -226,9 +231,11 @@ def create_arg_parser():
     parser.add_argument('--output', '-o', type=str, required=True, help="输出文件路径")
     return parser
 
+
 def get_res_path() -> Path:
     base_path = getattr(sys, '_MEIPASS', Path(__file__).parent)
     return Path(base_path)
+
 
 def run_main(args):
     config = Cfg(get_res_path() / "config/config.toml")
@@ -248,7 +255,7 @@ def run_main(args):
     # 直接写入Excel，无需通过Parquet中转
     # 注意: 这需要你的环境中安装了 `xlsxwriter` 或 `openpyxl`
     output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True) # 确保输出目录存在
+    output_path.parent.mkdir(parents=True, exist_ok=True)  # 确保输出目录存在
     combined_df.write_excel(output_path)
     # 删除.tmp
     shutil.rmtree(config.tmp_path)
