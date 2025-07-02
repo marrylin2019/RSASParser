@@ -208,13 +208,12 @@ def temp_type_detector(cfg: Cfg) -> TEMPLATE_TYPE:
     try:
         return TEMPLATE_TYPE(vulnTemplate)
     except ValueError as e:
-        if '站点列表' in titles and '漏洞列表' in titles:
+        if '站点列表' in titles and '漏洞列表' in titles and not ('主机信息' in titles and '漏洞信息' in titles):
             return TEMPLATE_TYPE.WEB
-        elif '主机信息' in titles and '漏洞信息' in titles:
+        elif '主机信息' in titles and '漏洞信息' in titles and not ('站点列表' in titles and '漏洞列表' in titles):
             return TEMPLATE_TYPE.ALL
         else:
-            print(f"Unimplemented template type {vulnTemplate}!")
-            sys.exit(-1)
+            raise ValueError(f"Unimplemented template type {vulnTemplate}!")
 
 
 # 解压整个ZIP包到指定目录 
@@ -247,7 +246,12 @@ def run_main(args):
     config = Cfg(get_res_path() / "config/config.toml")
     extract_zip(Path(args.input), config.tmp_path)
     hosts = [filename for filename in config.hosts.rglob(config.html_name_temp)]
-    temp_type = temp_type_detector(config)
+    try:
+        temp_type = temp_type_detector(config)
+    except ValueError as e:
+        print(f"错误: {e}")
+        shutil.rmtree(config.tmp_path)  # 清理临时目录
+        sys.exit(1)
     with ProcessPoolExecutor() as pool:
         parse_with_type = partial(parse_host, temp_type=temp_type)
         # 使用map并行处理所有host
@@ -265,6 +269,7 @@ def run_main(args):
     combined_df.write_excel(output_path)
     # 删除.tmp
     shutil.rmtree(config.tmp_path)
+    print(f"解析完成，结果已保存到: {output_path}")
 
 
 if __name__ == '__main__':
