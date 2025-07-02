@@ -16,7 +16,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 class TEMPLATE_TYPE(Enum):
     WEB = 'Web全部应用漏洞'
-    AUTO = '自动匹配扫描'
+    # AUTO = '自动匹配扫描'
     ALL = '全部漏洞扫描'
 
 
@@ -197,18 +197,24 @@ class WebTemparser:
 class PARSER_TYPE(Enum):
     WEB = WebTemparser
     ALL = AllTemparser
-    AUTO = AllTemparser
+    # AUTO = AllTemparser
 
 
 def temp_type_detector(cfg: Cfg) -> TEMPLATE_TYPE:
     elem = etree.HTML(cfg.index_html.read_text(encoding="utf-8"))
     data = json.loads(elem.xpath("//script[1]//text()")[0].replace("window.data = ", '').replace(';', ''))
+    titles = [item['title'] for item in data['categories']]
     vulnTemplate = data['categories'][0]['children'][0]['data']['vulnTemplate']
     try:
         return TEMPLATE_TYPE(vulnTemplate)
     except ValueError as e:
-        print(f"Unimplemented template type {vulnTemplate}!")
-        sys.exit(-1)
+        if '站点列表' in titles and '漏洞列表' in titles:
+            return TEMPLATE_TYPE.WEB
+        elif '主机信息' in titles and '漏洞信息' in titles:
+            return TEMPLATE_TYPE.ALL
+        else:
+            print(f"Unimplemented template type {vulnTemplate}!")
+            sys.exit(-1)
 
 
 # 解压整个ZIP包到指定目录 
