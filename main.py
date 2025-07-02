@@ -207,8 +207,8 @@ def temp_type_detector(cfg: Cfg) -> TEMPLATE_TYPE:
     try:
         return TEMPLATE_TYPE(vulnTemplate)
     except ValueError as e:
-        print("Unimplemented template type!")
-        exit(-1)
+        print(f"Unimplemented template type {vulnTemplate}!")
+        sys.exit(-1)
 
 
 # 解压整个ZIP包到指定目录 
