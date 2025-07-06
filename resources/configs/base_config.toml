@@ -1,0 +1,14 @@
+# 基础配置
+rsas_version = 'V60.R04F04SP06'
+tmp_folder = '.tmp'
+htmls_folder = 'host'
+html_name_template = '*.html'
+index_html = 'index.html'
+icons_folder = 'resources/assets/icons'
+exe_title = '绿盟漏扫（RSAS）报告解析器'
+# 资源配置
+[icons]
+LOGO = 'logo.png'
+FOLDER = 'folder.png'
+
+

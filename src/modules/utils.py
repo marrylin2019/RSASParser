@@ -2,8 +2,8 @@ import os
 import sys
 import toml
 import zipfile
-
 from pathlib import Path
+from types import SimpleNamespace
 
 
 # 获取资源的绝对路径，兼容开发环境和 PyInstaller 打包环境
@@ -20,22 +20,25 @@ class Cfg:
         return cls._instance
 
     def __init__(self):
-        self.__cfg: dict = toml.load(_BASE/"config/config.toml")
+        self.__cfg: dict = toml.load(_BASE/"resources/configs/base_config.toml")
         self.tmp_path = _BASE/self.__cfg['tmp_folder']
         self.index_html = self.tmp_path / self.__cfg['index_html']
+        self.hosts = self.tmp_path / self.__cfg['htmls_folder']
+        self.html_name_temp = self.__cfg['html_name_template']
+        self.rsas_version = self.__cfg['rsas_version']
+        self.exe_title = self.__cfg['exe_title']
+        self.__icons_folder = _BASE / self.__cfg['icons_folder']
+        self.ICONS = SimpleNamespace(**{key: self.__get_icon_path(key) for key in self.__cfg['icons']})
 
-    @property
-    def hosts(self) -> Path:
-        return self.tmp_path / self.__cfg['htmls_folder']
-
-    @property
-    def html_name_temp(self) -> str:
-        return self.__cfg['html_name_template']
-
-    @property
-    def rsas_version(self) -> str:
-        return self.__cfg['rsas_version']
-
+    def __get_icon_path(self, icon: str) -> Path:
+        """
+        获取图标的绝对路径
+        :param icon: 图标名称
+        :return: 图标的绝对路径
+        """
+        if icon not in self.__cfg['icons'].keys():
+            raise ValueError(f"图标 '{icon}' 不存在")
+        return self.__icons_folder / self.__cfg['icons'][icon]
 
 # 解压整个ZIP包到指定目录
 def extract_zip(zip_path: Path, output_dir: Path):

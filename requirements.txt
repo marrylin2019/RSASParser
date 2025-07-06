@@ -1,3 +1,4 @@
 toml
 polars[all]
 lxml
+pillow
