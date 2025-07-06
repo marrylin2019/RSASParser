@@ -1,10 +1,8 @@
-import itertools
 import json
-from pathlib import Path
-
+import itertools
 import polars as pl
 from lxml import etree
-from functools import partial
+from pathlib import Path
 from typing import Optional, List, Type
 from concurrent.futures import ProcessPoolExecutor
 

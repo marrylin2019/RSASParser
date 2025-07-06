@@ -2,3 +2,4 @@ toml
 polars[all]
 lxml
 pillow
+sv-ttk
